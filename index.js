@@ -1,8 +1,39 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 const request = require('request-promise-native');
+const fs = require('fs');
 const opggUrl = 'https://www.op.gg/champion';
 
+process.setMaxListeners(50);
+
+function index() {
+  const championJson = fs.readFileSync('test/champion.json');
+  const championData = JSON.parse(championJson).data;
+
+  for (let [index, championId] of Object.keys(championData).entries()) {
+    if (index == 10) { break; }
+    let champion = new Object();
+    champion.id = championId;
+    champion.name = championData[championId].name;
+    champion.key = championData[championId].key;
+    get_data(champion);
+  }
+}
+
+async function get_data(champion) {
+
+  let posspell = await get_position_spell(champion.id);
+  champion.position = posspell.position;
+  champion.spell = posspell.spell;
+  for (let pos of champion.position) {
+    champion.item = await get_item(champion.id, pos);
+    champion.skill = await get_skill(champion.id, pos);
+    champion.rune = await get_rune(champion.id, pos);
+  }
+
+  console.log(champion);
+
+}
 
 
 async function get_position_spell(champion) {
@@ -14,13 +45,21 @@ async function get_position_spell(champion) {
     '.champion-stats-header__position',
     divs => divs.map(div => div.dataset.position)
   );
-  const spell = await page.$$eval('.champion-overview__table--summonerspell img.tip', el => el.map(el => /\/spell\/(.*)\.png/.exec(el.src)).map(el => el[1]));
+
+  const obj = new Object();
+  obj.position = position;
+  obj.spell = new Object();
+
+  for (let pos of position) {
+    await page.goto(opggUrl + '/' + champion + '/' + pos);
+    let spell = await page.$$eval('.champion-overview__table--summonerspell img.tip', el => el.map(el => /\/spell\/(.*)\.png/.exec(el.src)).map(el => el[1]));
+    obj.spell[pos] = new Array();
+    obj.spell[pos] = spell;
+  }
+
   await browser.close();
 
-  await position.map(position => get_rune(champion, position));
-  // console.log(await(get_rune(champion, position)));
-
-
+  return obj;
 }
 
 async function get_item(champion, position) {
@@ -41,8 +80,15 @@ async function get_item(champion, position) {
 
   let shoes = await shoesHandle.$$eval('.champion-stats__single__item img', el => el.map(el => /\/item\/(.*)\.png/.exec(el.src)).map(el => el[1]));
 
+  const obj = new Object();
+  obj[position] = new Object();
+  obj[position].start = startItem;
+  obj[position].main = mainItem;
+  obj[position].shoes = shoes;
 
   await browser.close();
+
+  return obj;
 }
 
 async function get_skill(champion, position) {
@@ -57,11 +103,10 @@ async function get_skill(champion, position) {
 
   const skillMasterCheerio = cheerio.load(skillMasterHtml);
   const skillFirst3LevelCheerio = cheerio.load(skillFirst3LevelHtml);
-  // console.log(skillFirst3LevelHtml);
+
   let skillMaster = new Array();
   let skillFirst3Level = new Array();
-  // console.log(skillMasterCheerio);
-  // console.log(skillMasterCheerio('.champion-stats__filter_item_value--winrate').first().children('span').text());
+
   skillMasterCheerio('.champion-stats__filter__item.tabHeader').not('.champion-stats__filter__item--all').each(function (i, e) {
     let obj = new Object();
     obj.order = skillMasterCheerio(e).find('li.champion-stats__list__item.tip').children('span').text();
@@ -81,7 +126,14 @@ async function get_skill(champion, position) {
     }
   })
 
+  const obj = new Object();
+  obj[position] = new Object();
+  obj[position].master = skillMaster;
+  obj[position].first3Level = skillFirst3Level;
+
   await browser.close();
+
+  return obj;
 
 }
 
@@ -95,7 +147,7 @@ async function get_rune(champion, position) {
   const runeCheerio = cheerio.load(runeHTML);
 
   let rune = new Array();
-  // let runeDetail = new Array();
+
   await runeCheerio('.champion-stats__filter__item.tabHeader').not('.champion-stats__filter__item--all').each(function (i, e) {
     let obj = new Object();
 
@@ -115,7 +167,6 @@ async function get_rune(champion, position) {
         detailCheerio('.perk-page-wrap').each((i2, e2) => {
           runeDetail[i2] = new Array();
           detailCheerio(e2).find('div.perk-page__item--active img').each((i3, e3) => {
-            // console.log(/\/perk.*\/(.*)\.png/.exec(detailCheerio(e).attr('src'))[1]);
             runeDetail[i2].push(/\/perk.*\/(.*)\.png/.exec(detailCheerio(e3).attr('src'))[1]);
           })
           detailCheerio(e2).find('.fragment-page div.perk-page__image img.active').each((i3, e3) => {
@@ -127,11 +178,13 @@ async function get_rune(champion, position) {
         e.detail = runeDetail;
       }).catch((err) => console.log(err));
   }
-  console.log(rune);
-
   await browser.close();
 
-  // return rune;
+  const obj = new Object();
+  obj[position] = new Object();
+  obj[position].rune = rune;
+
+  return obj;
 
 
 }
@@ -140,5 +193,6 @@ function get_rune_detail_url(championId, position, mainRune, subrune) {
   return opggUrl + '/ajax/statistics/runeList/championId=' + championId + '&position=' + position + '&primaryPerkId=' + mainRune + '&subPerkStyleId=' + subrune;
 }
 
-
-get_position_spell('ryze');
+index();
+// get_position_spell('aatrox');
+// get_position_spell('ryze');

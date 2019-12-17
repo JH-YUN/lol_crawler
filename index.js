@@ -6,38 +6,46 @@ const opggUrl = 'https://www.op.gg/champion';
 
 process.setMaxListeners(50);
 
-function index() {
+async function index() {
   const championJson = fs.readFileSync('test/champion.json');
   const championData = JSON.parse(championJson).data;
+  const browser = await puppeteer.launch();
 
   for (let [index, championId] of Object.keys(championData).entries()) {
-    if (index == 10) { break; }
+    // if (index == 3) { break; }
     let champion = new Object();
     champion.id = championId;
     champion.name = championData[championId].name;
     champion.key = championData[championId].key;
-    get_data(champion);
+    await get_data(champion, browser);
   }
+  await browser.close();
 }
 
-async function get_data(champion) {
+async function get_data(champion, browser) {
+  // const page = await browser.newPage();
 
-  let posspell = await get_position_spell(champion.id);
+  let posspell = await get_position_spell(champion.id, browser);
   champion.position = posspell.position;
   champion.spell = posspell.spell;
   for (let pos of champion.position) {
-    champion.item = await get_item(champion.id, pos);
-    champion.skill = await get_skill(champion.id, pos);
-    champion.rune = await get_rune(champion.id, pos);
+    // pormise All로 묶어서 병렬 처리
+    [champion.item, champion.skill, champion.rune] = await Promise.all([get_item(champion.id, pos, browser), get_skill(champion.id, pos, browser), get_rune(champion.id, pos, browser)])
   }
+  let dt = new Date();
+  champion.date = `${
+    (dt.getMonth()+1).toString().padStart(2, '0')}/${
+    dt.getDate().toString().padStart(2, '0')}/${
+    dt.getFullYear().toString().padStart(4, '0')} ${
+    dt.getHours().toString().padStart(2, '0')}:${
+    dt.getMinutes().toString().padStart(2, '0')}:${
+    dt.getSeconds().toString().padStart(2, '0')}`;
 
-  console.log(champion);
-
+  fs.writeFile('test1/'+champion.id+'_data.json', JSON.stringify(champion), function(){});
 }
 
 
-async function get_position_spell(champion) {
-  const browser = await puppeteer.launch();
+async function get_position_spell(champion, browser) {
   const page = await browser.newPage();
   await page.goto(opggUrl + '/' + champion);
 
@@ -57,13 +65,12 @@ async function get_position_spell(champion) {
     obj.spell[pos] = spell;
   }
 
-  await browser.close();
+  await page.close();
 
   return obj;
 }
 
-async function get_item(champion, position) {
-  const browser = await puppeteer.launch();
+async function get_item(champion, position, browser) {
   const page = await browser.newPage();
   await page.goto(opggUrl + '/' + champion + '/statistics/' + position + '/item');
 
@@ -86,13 +93,12 @@ async function get_item(champion, position) {
   obj[position].main = mainItem;
   obj[position].shoes = shoes;
 
-  await browser.close();
+  await page.close();
 
   return obj;
 }
 
-async function get_skill(champion, position) {
-  const browser = await puppeteer.launch();
+async function get_skill(champion, position, browser) {
   const page = await browser.newPage();
   await page.goto(opggUrl + '/' + champion + '/statistics/' + position + '/skill');
 
@@ -131,15 +137,13 @@ async function get_skill(champion, position) {
   obj[position].master = skillMaster;
   obj[position].first3Level = skillFirst3Level;
 
-  await browser.close();
+  await page.close();
 
   return obj;
 
 }
 
-async function get_rune(champion, position) {
-
-  const browser = await puppeteer.launch();
+async function get_rune(champion, position, browser) {
   const page = await browser.newPage();
   await page.goto(opggUrl + '/' + champion + '/statistics/' + position + '/rune');
 
@@ -178,7 +182,7 @@ async function get_rune(champion, position) {
         e.detail = runeDetail;
       }).catch((err) => console.log(err));
   }
-  await browser.close();
+  await page.close();
 
   const obj = new Object();
   obj[position] = new Object();
@@ -194,5 +198,3 @@ function get_rune_detail_url(championId, position, mainRune, subrune) {
 }
 
 index();
-// get_position_spell('aatrox');
-// get_position_spell('ryze');

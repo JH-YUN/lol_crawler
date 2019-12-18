@@ -34,19 +34,33 @@ async function get_data(champion, browser) {
   }
   let dt = new Date();
   champion.date = `${
-    (dt.getMonth()+1).toString().padStart(2, '0')}/${
+    (dt.getMonth() + 1).toString().padStart(2, '0')}/${
     dt.getDate().toString().padStart(2, '0')}/${
     dt.getFullYear().toString().padStart(4, '0')} ${
     dt.getHours().toString().padStart(2, '0')}:${
     dt.getMinutes().toString().padStart(2, '0')}:${
     dt.getSeconds().toString().padStart(2, '0')}`;
 
-  fs.writeFile('test1/'+champion.id+'_data.json', JSON.stringify(champion), function(){});
+  fs.writeFileSync('test2/' + champion.id + '_data.json', JSON.stringify(champion));
 }
 
 
 async function get_position_spell(champion, browser) {
   const page = await browser.newPage();
+  // 이미지 폰트 css 불러오지 않도록 처리
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    switch (req.resourceType()) {
+      case 'stylesheet':
+      case 'font':
+      case 'image':
+        req.abort();
+        break;
+      default:
+        req.continue();
+        break;
+    }
+  });
   await page.goto(opggUrl + '/' + champion);
 
   const position = await page.$$eval(
@@ -72,6 +86,19 @@ async function get_position_spell(champion, browser) {
 
 async function get_item(champion, position, browser) {
   const page = await browser.newPage();
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    switch (req.resourceType()) {
+      case 'stylesheet':
+      case 'font':
+      case 'image':
+        req.abort();
+        break;
+      default:
+        req.continue();
+        break;
+    }
+  });
   await page.goto(opggUrl + '/' + champion + '/statistics/' + position + '/item');
 
   const itemList = await page.$$('.champion-box');
@@ -100,6 +127,19 @@ async function get_item(champion, position, browser) {
 
 async function get_skill(champion, position, browser) {
   const page = await browser.newPage();
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    switch (req.resourceType()) {
+      case 'stylesheet':
+      case 'font':
+      case 'image':
+        req.abort();
+        break;
+      default:
+        req.continue();
+        break;
+    }
+  });
   await page.goto(opggUrl + '/' + champion + '/statistics/' + position + '/skill');
 
   const skillHandle = await page.$$(".champion-box-content");
@@ -145,6 +185,19 @@ async function get_skill(champion, position, browser) {
 
 async function get_rune(champion, position, browser) {
   const page = await browser.newPage();
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    switch (req.resourceType()) {
+      case 'stylesheet':
+      case 'font':
+      case 'image':
+        req.abort();
+        break;
+      default:
+        req.continue();
+        break;
+    }
+  });
   await page.goto(opggUrl + '/' + champion + '/statistics/' + position + '/rune');
 
   const runeHTML = await page.$eval(".champion-box-content", e => e.outerHTML);

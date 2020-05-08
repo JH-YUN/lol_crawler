@@ -6,7 +6,7 @@ const opggUrl = 'https://www.op.gg/champion';
 
 process.setMaxListeners(50);
 
-async function index() {
+async function run() {
   const championJson = fs.readFileSync('test/champion.json');
   const championData = JSON.parse(championJson).data;
   const browser = await puppeteer.launch();
@@ -22,15 +22,22 @@ async function index() {
   await browser.close();
 }
 
-async function get_data(champion, browser) {
+// exports.get_data = async (champion, browser) => {
+async function get_data (champion, browser) {
   // const page = await browser.newPage();
 
   let posspell = await get_position_spell(champion.id, browser);
   champion.position = posspell.position;
   champion.spell = posspell.spell;
+  champion.item = new Object;
+  champion.skill = new Object;
+  champion.rune = new Object;
   for (let pos of champion.position) {
     // pormise All로 묶어서 병렬 처리
-    [champion.item, champion.skill, champion.rune] = await Promise.all([get_item(champion.id, pos, browser), get_skill(champion.id, pos, browser), get_rune(champion.id, pos, browser)])
+    [item, skill, rune] = await Promise.all([get_item(champion.id, pos, browser), get_skill(champion.id, pos, browser), get_rune(champion.id, pos, browser)])
+    champion.item[pos] = item;
+    champion.skill[pos] = skill;
+    champion.rune[pos] = rune;
   }
   let dt = new Date();
   champion.date = `${
@@ -250,4 +257,7 @@ function get_rune_detail_url(championId, position, mainRune, subrune) {
   return opggUrl + '/ajax/statistics/runeList/championId=' + championId + '&position=' + position + '&primaryPerkId=' + mainRune + '&subPerkStyleId=' + subrune;
 }
 
-index();
+// index();
+
+exports.get_data = get_data
+exports.run = run

@@ -122,10 +122,9 @@ async function get_item(champion, position, browser) {
   let shoes = await shoesHandle.$$eval('.champion-stats__single__item img', el => el.map(el => /\/item\/(.*)\.png/.exec(el.src)).map(el => el[1]));
 
   const obj = new Object();
-  obj[position] = new Object();
-  obj[position].start = startItem;
-  obj[position].main = mainItem;
-  obj[position].shoes = shoes;
+  obj.start = startItem;
+  obj.main = mainItem;
+  obj.shoes = shoes;
 
   await page.close();
 
@@ -180,9 +179,8 @@ async function get_skill(champion, position, browser) {
   })
 
   const obj = new Object();
-  obj[position] = new Object();
-  obj[position].master = skillMaster;
-  obj[position].first3Level = skillFirst3Level;
+  obj.master = skillMaster;
+  obj.first3Level = skillFirst3Level;
 
   await page.close();
 
@@ -245,8 +243,7 @@ async function get_rune(champion, position, browser) {
   await page.close();
 
   const obj = new Object();
-  obj[position] = new Object();
-  obj[position].rune = rune;
+  obj.rune = rune;
 
   return obj;
 

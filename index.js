@@ -222,8 +222,10 @@ async function get_rune(champion, position, browser) {
     await runeCheerio('.champion-stats__filter__item.tabHeader').not('.champion-stats__filter__item--all').each(function(i, e) {
         let obj = new Object();
 
+        obj.mainStyle = /\/perk.*\/(.*)\.png/.exec(runeCheerio(e).find('img').eq(0).attr('src'))[1]
         obj.mainRune = /\/perk.*\/(.*)\.png/.exec(runeCheerio(e).find('img').eq(1).attr('src'))[1];
-        obj.subRune = /\/perk.*\/(.*)\.png/.exec(runeCheerio(e).find('img').eq(2).attr('src'))[1];
+        obj.subStyle = /\/perk.*\/(.*)\.png/.exec(runeCheerio(e).find('img').eq(2).attr('src'))[1];
+        obj.subRune = obj.subStyle;
         obj.pick = runeCheerio(e).find('.champion-stats__filter__item__value b').eq(0).text();
 
         rune.push(obj);
